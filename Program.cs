@@ -26,7 +26,21 @@ builder.Services.AddIdentityApiEndpoints<IdentityUser>()
 
 builder.Services.AddOpenApi();
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
+
+app.UseCors("AllowAngular");
 
 app.MapIdentityApi<IdentityUser>();
 
