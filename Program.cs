@@ -31,7 +31,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
     {
-        policy.WithOrigins("http://localhost:4200")
+        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -39,6 +39,15 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+//Kestral enforces this even if you dont use this in development
+//because its i think in vs settings does we need to it for production
+//there settings might be different and we dont want to guess.
+
+//In development visual studio uses launch.json to confif kestral server
+//but that file is ignored in production so thats why this middleware needs to be
+//used even though redirection works without in development
+app.UseHttpsRedirection();
 
 app.UseCors("AllowAngular");
 
