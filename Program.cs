@@ -1,6 +1,10 @@
 using Authentication.Identity;
+using Authentication.Identity.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +27,35 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddIdentityApiEndpoints<IdentityUser>()
     .AddEntityFrameworkStores<AuthDbContext>();
+
+// Add custom services
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? 
+            throw new InvalidOperationException("JWT Key not configured")))
+    };
+});
+
+// Add controllers
+builder.Services.AddControllers();
 
 builder.Services.AddOpenApi();
 
@@ -51,7 +84,15 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAngular");
 
-app.MapIdentityApi<IdentityUser>();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Map custom controllers
+app.MapControllers();
+
+// Keep Identity API endpoints if you want to use them alongside custom endpoints
+// Comment out the line below if you only want custom endpoints
+// app.MapIdentityApi<IdentityUser>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
